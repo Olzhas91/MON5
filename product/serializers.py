@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from .models import Category, Product, Review
+from .models import Category, Product, Review, Tag
+
+
+class TagsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ('id', 'name')
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -14,9 +20,27 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    tags = TagsSerializer(many=True, read_only=True)
+
     class Meta:
         model = Product
-        fields = ('id', 'title', 'description', 'price', 'category')
+        fields = ('id', 'title', 'description', 'price', 'category', 'tags')
+
+
+class ProductValidateSerializer(serializers.ModelSerializer):
+    tags = serializers.ListField(child=serializers.IntegerField(), required=False)
+
+    class Meta:
+        model = Product
+        fields = ('id', 'title', 'description', 'price', 'category', 'tags')
+
+    def validate_tags(self, value: list):
+        for tag_id in value:
+            try:
+                Tag.objects.get(id=tag_id)
+            except Tag.DoesNotExist:
+                raise serializers.ValidationError(f'Тег с id {tag_id} не существует')
+        return value
 
 
 class ReviewSerializer(serializers.ModelSerializer):
